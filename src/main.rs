@@ -1,41 +1,99 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite::MaterialMesh2dBundle, window::PrimaryWindow};
 
 #[derive(Component)]
-struct Person;
-
-#[derive(Component)]
-struct Name(String);
-
-fn add_people(mut commands: Commands) {
-    commands.spawn((Person, Name("Elaina Proctor".to_string())));
-    commands.spawn((Person, Name("Renzo Hume".to_string())));
-    commands.spawn((Person, Name("Zayna Nieves".to_string())));
+enum Direction {
+    Right,
+    Left,
 }
 
-#[derive(Resource)]
-struct GreetTimer(Timer);
+const BALLOON_SIZE: f32 = 50.;
+const BALLOON_SPEED: f32 = 150.;
 
-fn greet_people(time: Res<Time>, mut timer: ResMut<GreetTimer>, query: Query<&Name, With<Person>>) {
-    // update our timer with the time elapsed since the last update
-    // if that caused the timer to finish, we say hello to everyone
-    if timer.0.tick(time.delta()).just_finished() {
-        for name in &query {
-            println!("hello {}!", name.0);
+fn start_scene(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+) {
+    commands.spawn(Camera2dBundle::default());
+
+    let window = window_query.get_single().unwrap();
+    let width = window.width();
+
+    commands.spawn((
+        MaterialMesh2dBundle {
+            mesh: meshes.add(shape::Circle::new(BALLOON_SIZE).into()).into(),
+            material: materials.add(ColorMaterial::from(Color::RED)),
+            transform: Transform::from_translation(Vec3::new(-width / 2. + BALLOON_SIZE, 0., 0.)),
+            ..default()
+        },
+        Direction::Right,
+    ));
+}
+
+fn move_balloons(
+    time: Res<Time>,
+    mut sprite_position: Query<(&mut Direction, &mut Transform)>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+) {
+    let window = window_query.get_single().unwrap();
+    let width = window.width();
+
+    for (mut balloon, mut transform) in &mut sprite_position {
+        match *balloon {
+            Direction::Right => transform.translation.x += BALLOON_SPEED * time.delta_seconds(),
+            Direction::Left => transform.translation.x -= BALLOON_SPEED * time.delta_seconds(),
+        }
+
+        if transform.translation.x > width / 2. - BALLOON_SIZE {
+            *balloon = Direction::Left;
+        } else if transform.translation.x < -width / 2. + BALLOON_SIZE {
+            *balloon = Direction::Right;
         }
     }
 }
 
-pub struct HelloPlugin;
+#[derive(Resource)]
+struct SpawnTimer(Timer);
 
-impl Plugin for HelloPlugin {
+fn spawn_balloons(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut timer: ResMut<SpawnTimer>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+) {
+    if timer.0.tick(time.delta()).just_finished() {
+        let window = window_query.get_single().unwrap();
+        let width = window.width();
+
+        commands.spawn((
+            MaterialMesh2dBundle {
+                mesh: meshes.add(shape::Circle::new(BALLOON_SIZE).into()).into(),
+                material: materials.add(ColorMaterial::from(Color::RED)),
+                transform: Transform::from_translation(Vec3::new(
+                    -width / 2. + BALLOON_SIZE,
+                    0.,
+                    0.,
+                )),
+                ..default()
+            },
+            Direction::Right,
+        ));
+    }
+}
+
+pub struct GamePlugin;
+
+impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        // add things to your app here
-        app.insert_resource(GreetTimer(Timer::from_seconds(2.0, TimerMode::Repeating)))
-            .add_systems(Startup, add_people)
-            .add_systems(Update, greet_people);
+        app.add_systems(Startup, start_scene)
+            .insert_resource(SpawnTimer(Timer::from_seconds(2.0, TimerMode::Repeating)))
+            .add_systems(Update, (move_balloons, spawn_balloons));
     }
 }
 
 fn main() {
-    App::new().add_plugins((DefaultPlugins, HelloPlugin)).run();
+    App::new().add_plugins((DefaultPlugins, GamePlugin)).run();
 }
