@@ -1,99 +1,77 @@
-use bevy::{prelude::*, sprite::MaterialMesh2dBundle, window::PrimaryWindow};
+use macroquad::prelude::*;
 
-#[derive(Component)]
+use std::collections::LinkedList;
+
+const SQUARES: i16 = 16;
+
+type Point = (i16, i16);
+
 enum Direction {
     Right,
     Left,
 }
 
-const BALLOON_SIZE: f32 = 50.;
-const BALLOON_SPEED: f32 = 150.;
-
-fn start_scene(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    window_query: Query<&Window, With<PrimaryWindow>>,
-) {
-    commands.spawn(Camera2dBundle::default());
-
-    let window = window_query.get_single().unwrap();
-    let width = window.width();
-
-    commands.spawn((
-        MaterialMesh2dBundle {
-            mesh: meshes.add(shape::Circle::new(BALLOON_SIZE).into()).into(),
-            material: materials.add(ColorMaterial::from(Color::RED)),
-            transform: Transform::from_translation(Vec3::new(-width / 2. + BALLOON_SIZE, 0., 0.)),
-            ..default()
-        },
-        Direction::Right,
-    ));
+struct Balloon {
+    position: Vec2,
+    direction: Direction,
 }
 
-fn move_balloons(
-    time: Res<Time>,
-    mut sprite_position: Query<(&mut Direction, &mut Transform)>,
-    window_query: Query<&Window, With<PrimaryWindow>>,
-) {
-    let window = window_query.get_single().unwrap();
-    let width = window.width();
+#[macroquad::main("Snake")]
+async fn main() {
+    let mut score = 0;
+    const BALLOON_SIZE: f32 = 50.;
+    const BALLOON_SPEED: f32 = 150.;
+    let mut last_update = get_time();
+    let mut game_over = false;
 
-    for (mut balloon, mut transform) in &mut sprite_position {
-        match *balloon {
-            Direction::Right => transform.translation.x += BALLOON_SPEED * time.delta_seconds(),
-            Direction::Left => transform.translation.x -= BALLOON_SPEED * time.delta_seconds(),
+    let mut balloon = Balloon {
+        position: Vec2::new(-screen_width() / 2., 0.),
+        direction: Direction::Right,
+    };
+
+    loop {
+        if !game_over {
+            if is_key_down(KeyCode::T) {
+                game_over = true;
+            }
+
+            if is_key_down(KeyCode::Right) {
+                balloon.position.x += BALLOON_SPEED * get_frame_time();
+            } else if is_key_down(KeyCode::Left) {
+                balloon.position.x -= BALLOON_SPEED * get_frame_time();
+            }
         }
+        if !game_over {
+            clear_background(LIGHTGRAY);
 
-        if transform.translation.x > width / 2. - BALLOON_SIZE {
-            *balloon = Direction::Left;
-        } else if transform.translation.x < -width / 2. + BALLOON_SIZE {
-            *balloon = Direction::Right;
+            let game_size = screen_width().min(screen_height());
+
+            draw_circle(balloon.position.x, balloon.position.y, BALLOON_SIZE, RED);
+            draw_text(format!("SCORE: {score}").as_str(), 10., 20., 20., DARKGRAY);
+        } else {
+            clear_background(WHITE);
+            let text = "Game Over. Press [enter] to play again.";
+            let font_size = 30.;
+            let text_size = measure_text(text, None, font_size as _, 1.0);
+
+            draw_text(
+                text,
+                screen_width() / 2. - text_size.width / 2.,
+                screen_height() / 2. + text_size.height / 2.,
+                font_size,
+                DARKGRAY,
+            );
+
+            if is_key_down(KeyCode::Enter) {
+                balloon = Balloon {
+                    position: Vec2::new(-screen_width() / 2., 0.),
+                    direction: Direction::Right,
+                };
+                score = 0;
+                last_update = get_time();
+                game_over = false;
+            }
         }
+        next_frame().await;
     }
-}
-
-#[derive(Resource)]
-struct SpawnTimer(Timer);
-
-fn spawn_balloons(
-    time: Res<Time>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    mut timer: ResMut<SpawnTimer>,
-    window_query: Query<&Window, With<PrimaryWindow>>,
-) {
-    if timer.0.tick(time.delta()).just_finished() {
-        let window = window_query.get_single().unwrap();
-        let width = window.width();
-
-        commands.spawn((
-            MaterialMesh2dBundle {
-                mesh: meshes.add(shape::Circle::new(BALLOON_SIZE).into()).into(),
-                material: materials.add(ColorMaterial::from(Color::RED)),
-                transform: Transform::from_translation(Vec3::new(
-                    -width / 2. + BALLOON_SIZE,
-                    0.,
-                    0.,
-                )),
-                ..default()
-            },
-            Direction::Right,
-        ));
-    }
-}
-
-pub struct GamePlugin;
-
-impl Plugin for GamePlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Startup, start_scene)
-            .insert_resource(SpawnTimer(Timer::from_seconds(2.0, TimerMode::Repeating)))
-            .add_systems(Update, (move_balloons, spawn_balloons));
-    }
-}
-
-fn main() {
-    App::new().add_plugins((DefaultPlugins, GamePlugin)).run();
 }
