@@ -21,17 +21,23 @@ struct Tower {
 struct Projectile {
     position: Vec2,
     direction: Vec2,
+    is_alive: bool,
 }
 
+const BALLOON_SPRITE_SIZE: f32 = 32.;
+const BALLOON_SIZE: f32 = BALLOON_SPRITE_SIZE * 3.;
+const BALLOON_COLLIDER_SIZE: f32 = BALLOON_SIZE / 2.;
+
 fn check_collision(projectile: &Projectile, balloon: &Balloon) -> bool {
-    let distance = (projectile.position - balloon.position).length();
-    distance < 50.
+    let distance_x = projectile.position.x - balloon.position.x;
+    let distance_y = projectile.position.y - balloon.position.y;
+
+    return distance_x.abs() < BALLOON_COLLIDER_SIZE && distance_y.abs() < BALLOON_COLLIDER_SIZE;
 }
 
 #[macroquad::main("Balloons")]
 async fn main() {
     let mut score = 0;
-    const BALLOON_SIZE: f32 = 50.;
     const BALLOON_SPEED: f32 = 150.;
     let mut last_update = get_time();
     let mut game_over = false;
@@ -46,9 +52,36 @@ async fn main() {
 
     let mut projectiles: Vec<Projectile> = Vec::new();
 
+    let background_sprite = load_texture("resources/sprites/background.png")
+        .await
+        .unwrap();
+
+    let balloon_sprite = load_texture("resources/sprites/balloon.png").await.unwrap();
+
+    background_sprite.set_filter(FilterMode::Nearest);
+    balloon_sprite.set_filter(FilterMode::Nearest);
+
     loop {
         if !game_over {
             clear_background(LIGHTGRAY);
+
+            let scale_factor = screen_width() / background_sprite.width();
+            let adjusted_width = background_sprite.width() * scale_factor;
+            let adjusted_height = background_sprite.height() * scale_factor;
+
+            let x = (screen_width() - adjusted_width) / 2.0;
+            let y = (screen_height() - adjusted_height) / 2.0;
+
+            draw_texture_ex(
+                &background_sprite,
+                x,
+                y,
+                WHITE,
+                DrawTextureParams {
+                    dest_size: Some(Vec2::new(adjusted_width, adjusted_height)),
+                    ..Default::default()
+                },
+            );
 
             if is_key_down(KeyCode::T) {
                 is_placing_tower = true;
@@ -82,7 +115,24 @@ async fn main() {
                     balloon.position.x = screen_width() + BALLOON_SIZE;
                 }
 
-                draw_circle(balloon.position.x, screen_height() / 2., BALLOON_SIZE, RED);
+                draw_texture_ex(
+                    &balloon_sprite,
+                    balloon.position.x - BALLOON_SIZE / 2.,
+                    screen_height() / 2. - (BALLOON_SIZE / 2.),
+                    WHITE,
+                    DrawTextureParams {
+                        dest_size: Some(Vec2::new(BALLOON_SIZE, BALLOON_SIZE)),
+                        ..Default::default()
+                    },
+                );
+
+                draw_circle_lines(
+                    balloon.position.x,
+                    screen_height() / 2.,
+                    BALLOON_COLLIDER_SIZE,
+                    2.,
+                    RED,
+                );
             }
 
             const TOWER_SIZE: f32 = 50.;
@@ -135,6 +185,7 @@ async fn main() {
                     let new_projectile: Projectile = Projectile {
                         position: Vec2::new(tower.position.x, tower.position.y),
                         direction: Vec2::new(tower.angle.cos(), tower.angle.sin()),
+                        is_alive: true,
                     };
 
                     projectiles.push(new_projectile);
@@ -143,15 +194,26 @@ async fn main() {
             }
 
             for projectile in &mut projectiles {
-                projectile.position += projectile.direction * 300. * get_frame_time();
+                projectile.position += projectile.direction * 500. * get_frame_time();
+
+                let balloons_before = balloons.len();
 
                 balloons = balloons
                     .into_iter()
                     .filter(|balloon| !check_collision(projectile, balloon))
                     .collect();
 
+                if balloons.len() < balloons_before {
+                    projectile.is_alive = false;
+                }
+
                 draw_circle(projectile.position.x, projectile.position.y, 15., ORANGE);
             }
+
+            projectiles = projectiles
+                .into_iter()
+                .filter(|projectile| projectile.is_alive)
+                .collect();
 
             draw_text(format!("SCORE: {score}").as_str(), 10., 20., 20., DARKGRAY);
         } else {
