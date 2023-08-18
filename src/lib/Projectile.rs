@@ -3,10 +3,17 @@ use macroquad::prelude::*;
 use crate::lib::Balloon::Balloon;
 
 #[derive(Copy, Clone)]
+pub enum ProjectileState {
+    Alive,
+    Dead,
+    Hit,
+}
+
+#[derive(Copy, Clone)]
 pub struct Projectile {
     position: Vec2,
     direction: Vec2,
-    is_alive: bool,
+    state: ProjectileState,
 }
 
 const PROJECTILE_SIZE: f32 = 15.;
@@ -16,7 +23,7 @@ impl Projectile {
         Self {
             position,
             direction,
-            is_alive: true,
+            state: ProjectileState::Alive,
         }
     }
 
@@ -28,7 +35,7 @@ impl Projectile {
             || self.position.y < 0.
             || self.position.y > screen_height()
         {
-            self.is_alive = false;
+            self.state = ProjectileState::Dead;
         }
     }
 
@@ -48,12 +55,24 @@ impl Projectile {
         return true;
     }
 
-    pub fn destroy(&mut self) {
-        self.is_alive = false;
+    pub fn hit(&mut self) {
+        self.state = ProjectileState::Hit;
     }
 
     pub fn is_alive(&self) -> bool {
-        self.is_alive
+        match self.state {
+            ProjectileState::Alive => true,
+            ProjectileState::Dead => false,
+            ProjectileState::Hit => false,
+        }
+    }
+
+    pub fn is_hit(&self) -> bool {
+        match self.state {
+            ProjectileState::Alive => false,
+            ProjectileState::Dead => false,
+            ProjectileState::Hit => true,
+        }
     }
 
     pub fn draw(&self) {

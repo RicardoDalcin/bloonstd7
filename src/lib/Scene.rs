@@ -3,7 +3,6 @@ use std::collections::LinkedList;
 
 use crate::lib::Balloon::Balloon;
 use crate::lib::Balloon::BalloonState;
-use crate::lib::Projectile::Projectile;
 use crate::lib::Tower::Tower;
 
 struct Sprites {
@@ -18,7 +17,6 @@ pub struct Scene {
     sprites: Sprites,
     balloons: Vec<Balloon>,
     towers: LinkedList<Tower>,
-    projectiles: Vec<Projectile>,
     spawn_timer: f32,
     is_placing_tower: bool,
     preview_tower: Option<Tower>,
@@ -45,7 +43,6 @@ impl Scene {
             },
             balloons: Vec::new(),
             towers: LinkedList::new(),
-            projectiles: Vec::new(),
             spawn_timer: 0.0,
             is_placing_tower: false,
             preview_tower: None,
@@ -61,7 +58,6 @@ impl Scene {
 
         self.balloons.clear();
         self.towers.clear();
-        self.projectiles.clear();
     }
 
     fn draw_background(&self) {
@@ -162,12 +158,12 @@ impl Scene {
 
                     self.is_placing_tower = false;
                     self.preview_tower = None;
+                    self.coins -= 15;
                 }
             }
 
             self.update_balloons(delta_time);
             self.update_towers(delta_time);
-            self.update_projectiles(delta_time);
 
             for balloon in &mut self.balloons {
                 let position = balloon.get_position();
@@ -183,29 +179,23 @@ impl Scene {
                 }
             }
 
-            for projectile in &mut self.projectiles {
-                for balloon in &mut self.balloons {
-                    if projectile.check_collision(balloon) {
-                        projectile.destroy();
-                        balloon.set_state(BalloonState::Popped);
-                        self.coins += 5;
+            for tower in &mut self.towers {
+                for projectile in &mut tower.get_projectiles().iter_mut() {
+                    for balloon in &mut self.balloons {
+                        if projectile.check_collision(balloon) {
+                            projectile.hit();
+                            balloon.set_state(BalloonState::Popped);
+
+                            self.coins += 1;
+                        }
                     }
                 }
+
+                tower.clean_projectiles();
             }
 
-            let balloon_list = &mut self.balloons;
-            self.balloons = balloon_list
-                .clone()
-                .into_iter()
-                .filter(|balloon| balloon.get_state() == BalloonState::Alive)
-                .collect();
-
-            let projectile_list = &mut self.projectiles;
-            self.projectiles = projectile_list
-                .clone()
-                .into_iter()
-                .filter(|projectile| projectile.is_alive())
-                .collect();
+            self.balloons
+                .retain(|balloon| balloon.get_state() == BalloonState::Alive);
 
             self.draw_statistics();
         } else {
@@ -239,13 +229,11 @@ impl Scene {
         for tower in &mut self.towers {
             tower.update(delta_time);
             tower.draw();
-        }
-    }
 
-    fn update_projectiles(&mut self, delta_time: f32) {
-        for projectile in &mut self.projectiles {
-            projectile.update(delta_time);
-            projectile.draw();
+            for projectile in &mut tower.get_projectiles().iter_mut() {
+                projectile.update(delta_time);
+                projectile.draw();
+            }
         }
     }
 }
