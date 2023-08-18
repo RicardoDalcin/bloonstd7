@@ -2,6 +2,7 @@ use macroquad::prelude::*;
 use std::collections::LinkedList;
 
 use crate::lib::Balloon::Balloon;
+use crate::lib::Balloon::BalloonState;
 use crate::lib::Projectile::Projectile;
 use crate::lib::Tower::Tower;
 
@@ -85,6 +86,24 @@ impl Scene {
         );
     }
 
+    fn draw_statistics(&self) {
+        draw_text(
+            format!("COINS: {}", self.coins).as_str(),
+            10.,
+            32.,
+            32.,
+            WHITE,
+        );
+
+        draw_text(
+            format!("LIVES: {}", self.lives).as_str(),
+            10.,
+            64.,
+            32.,
+            WHITE,
+        );
+    }
+
     fn spawn_balloon(&mut self) {
         self.balloons.push(Balloon::new());
     }
@@ -150,21 +169,45 @@ impl Scene {
             self.update_towers(delta_time);
             self.update_projectiles(delta_time);
 
-            draw_text(
-                format!("COINS: {}", self.coins).as_str(),
-                10.,
-                32.,
-                32.,
-                WHITE,
-            );
+            for balloon in &mut self.balloons {
+                let position = balloon.get_position();
+                let size = balloon.get_collision_size();
 
-            draw_text(
-                format!("LIVES: {}", self.lives).as_str(),
-                10.,
-                64.,
-                32.,
-                WHITE,
-            )
+                if position.x > screen_width() + size || position.x < -size {
+                    balloon.set_state(BalloonState::Escaped);
+                    self.lives -= 1;
+
+                    if self.lives <= 0 {
+                        self.game_over = true;
+                    }
+                }
+            }
+
+            for projectile in &mut self.projectiles {
+                for balloon in &mut self.balloons {
+                    if projectile.check_collision(balloon) {
+                        projectile.destroy();
+                        balloon.set_state(BalloonState::Popped);
+                        self.coins += 5;
+                    }
+                }
+            }
+
+            let balloon_list = &mut self.balloons;
+            self.balloons = balloon_list
+                .clone()
+                .into_iter()
+                .filter(|balloon| balloon.get_state() == BalloonState::Alive)
+                .collect();
+
+            let projectile_list = &mut self.projectiles;
+            self.projectiles = projectile_list
+                .clone()
+                .into_iter()
+                .filter(|projectile| projectile.is_alive())
+                .collect();
+
+            self.draw_statistics();
         } else {
             clear_background(WHITE);
             let text = "Game Over. Press [enter] to play again.";

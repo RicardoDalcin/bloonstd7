@@ -1,14 +1,27 @@
 use macroquad::prelude::*;
 
+#[derive(Copy, Clone)]
 enum Direction {
     Right,
     Left,
 }
 
-enum BalloonState {
+#[derive(Copy, Clone)]
+pub enum BalloonState {
     Alive,
     Popped,
-    Crossed,
+    Escaped,
+}
+
+impl PartialEq for BalloonState {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Alive, Self::Alive) => true,
+            (Self::Popped, Self::Popped) => true,
+            (Self::Escaped, Self::Escaped) => true,
+            _ => false,
+        }
+    }
 }
 
 const BALLOON_SPRITE_SIZE: f32 = 48.;
@@ -16,6 +29,7 @@ const BALLOON_SIZE: f32 = BALLOON_SPRITE_SIZE * 3.;
 const BALLOON_COLLIDER_SIZE: f32 = BALLOON_SIZE / 2.;
 const BALLOON_SPEED: f32 = 150.;
 
+#[derive(Copy, Clone)]
 pub struct Balloon {
     position: Vec2,
     direction: Direction,
@@ -36,12 +50,22 @@ impl Balloon {
             Direction::Right => self.position.x += BALLOON_SPEED * delta_time,
             Direction::Left => self.position.x -= BALLOON_SPEED * delta_time,
         }
+    }
 
-        if self.position.x > screen_width() + BALLOON_SIZE {
-            self.position.x = -BALLOON_SIZE;
-        } else if self.position.x < -BALLOON_SIZE {
-            self.position.x = screen_width() + BALLOON_SIZE;
-        }
+    pub fn get_position(&self) -> Vec2 {
+        self.position
+    }
+
+    pub fn get_collision_size(&self) -> f32 {
+        BALLOON_COLLIDER_SIZE
+    }
+
+    pub fn get_state(&self) -> BalloonState {
+        self.state
+    }
+
+    pub fn set_state(&mut self, state: BalloonState) {
+        self.state = state;
     }
 
     pub fn draw(&self, balloon_sprite: &Texture2D) {
