@@ -52,7 +52,7 @@ impl Scene {
     }
 
     pub fn reset(&mut self) {
-        self.coins = 0;
+        self.coins = 30;
         self.lives = 3;
         self.game_over = false;
         self.spawn_timer = 0.0;
