@@ -12,7 +12,7 @@ struct Sprites {
 
 pub struct Scene {
     coins: u32,
-    lives: u32,
+    lives: i32,
     game_over: bool,
     sprites: Sprites,
     balloons: Vec<Balloon>,
@@ -21,6 +21,8 @@ pub struct Scene {
     is_placing_tower: bool,
     preview_tower: Option<Tower>,
 }
+
+const TOWER_COST: u32 = 15;
 
 impl Scene {
     pub async fn new() -> Self {
@@ -152,13 +154,13 @@ impl Scene {
 
                 self.preview_tower.as_mut().unwrap().draw();
 
-                if is_mouse_button_down(MouseButton::Left) {
+                if is_mouse_button_down(MouseButton::Left) && self.coins >= TOWER_COST {
                     self.towers
                         .push_back(self.preview_tower.as_mut().unwrap().clone());
 
                     self.is_placing_tower = false;
                     self.preview_tower = None;
-                    self.coins -= 15;
+                    self.coins -= TOWER_COST;
                 }
             }
 
