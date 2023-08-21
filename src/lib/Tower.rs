@@ -81,14 +81,18 @@ impl Tower {
         }
     }
 
-    pub fn draw(&self) {
-        let color = match self.level {
-            1 => BLUE,
-            2 => GREEN,
-            3 => YELLOW,
-            4 => ORANGE,
-            5 => RED,
-            _ => RED,
+    pub fn draw(&self, is_disabled: bool) {
+        let color = if is_disabled {
+            GRAY
+        } else {
+            match self.level {
+                1 => BLUE,
+                2 => GREEN,
+                3 => YELLOW,
+                4 => ORANGE,
+                5 => RED,
+                _ => RED,
+            }
         };
 
         draw_circle(self.position.x, self.position.y, TOWER_SIZE, color);

@@ -112,8 +112,8 @@ impl Scene {
 
             self.spawn_timer += delta_time;
 
-            if self.spawn_timer > 1.0 {
-                self.spawn_timer -= 1.0;
+            if self.spawn_timer > 1. {
+                self.spawn_timer -= 1.;
                 self.spawn_balloon();
             }
 
@@ -152,7 +152,10 @@ impl Scene {
                     .unwrap()
                     .set_position(Vec2::new(mouse_position.0, mouse_position.1));
 
-                self.preview_tower.as_mut().unwrap().draw();
+                self.preview_tower
+                    .as_mut()
+                    .unwrap()
+                    .draw(self.coins < TOWER_COST);
 
                 if is_mouse_button_down(MouseButton::Left) && self.coins >= TOWER_COST {
                     self.towers
@@ -230,7 +233,7 @@ impl Scene {
     fn update_towers(&mut self, delta_time: f32) {
         for tower in &mut self.towers {
             tower.update(delta_time);
-            tower.draw();
+            tower.draw(false);
 
             for projectile in &mut tower.get_projectiles().iter_mut() {
                 projectile.update(delta_time);
