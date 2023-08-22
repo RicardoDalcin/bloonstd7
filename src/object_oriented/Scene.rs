@@ -1,9 +1,9 @@
 use macroquad::prelude::*;
 use std::collections::LinkedList;
 
-use crate::lib::Balloon::Balloon;
-use crate::lib::Balloon::BalloonState;
-use crate::lib::Tower::Tower;
+use crate::object_oriented::Balloon::Balloon;
+use crate::object_oriented::Balloon::BalloonState;
+use crate::object_oriented::Tower::Tower;
 
 struct Sprites {
     background: Texture2D,

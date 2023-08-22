@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 
-use crate::lib::Balloon::Balloon;
+use crate::object_oriented::Balloon::Balloon;
 
 #[derive(Copy, Clone)]
 pub enum ProjectileState {

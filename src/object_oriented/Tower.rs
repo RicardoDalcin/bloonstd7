@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 
-use crate::lib::Projectile::Projectile;
+use crate::object_oriented::Projectile::Projectile;
 
 #[derive(Clone)]
 pub struct Tower {
