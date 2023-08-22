@@ -2,21 +2,32 @@
 
 use macroquad::prelude::*;
 
+use crate::functional::Balloon::draw_balloon;
+use crate::functional::Balloon::new_balloon;
+use crate::functional::Balloon::update_balloon;
+use crate::functional::Balloon::Balloon;
+
 #[derive(Clone)]
 pub struct GameState {
+    delta_time: f32,
     balloon_sprite: Option<Texture2D>,
     background_sprite: Option<Texture2D>,
     coins: u32,
     lives: i32,
     game_over: bool,
+    spawn_timer: f32,
+    balloons: Vec<Balloon>,
 }
 
 const INITIAL_STATE: GameState = GameState {
+    delta_time: 0.0,
     balloon_sprite: None,
     background_sprite: None,
     coins: 30,
     lives: 3,
     game_over: false,
+    spawn_timer: 0.0,
+    balloons: Vec::new(),
 };
 
 pub fn new_scene() -> GameState {
@@ -65,7 +76,7 @@ pub async fn init_scene(state: GameState) -> GameState {
 //     };
 // }
 
-fn reset(state: GameState, next_fn: fn(GameState) -> GameState) -> GameState {
+fn reset(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
     let mut next_state = state.clone();
 
     next_state.game_over = false;
@@ -75,7 +86,7 @@ fn reset(state: GameState, next_fn: fn(GameState) -> GameState) -> GameState {
     return next_fn(next_state);
 }
 
-fn draw_game_over(state: GameState, next_fn: fn(GameState) -> GameState) -> GameState {
+fn draw_game_over(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
     clear_background(LIGHTGRAY);
 
     clear_background(WHITE);
@@ -98,7 +109,7 @@ fn draw_game_over(state: GameState, next_fn: fn(GameState) -> GameState) -> Game
     return next_fn(state);
 }
 
-fn draw_background(state: GameState, next_fn: fn(GameState) -> GameState) -> GameState {
+fn draw_background(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
     clear_background(LIGHTGRAY);
 
     if state.background_sprite.is_none() {
@@ -128,7 +139,7 @@ fn draw_background(state: GameState, next_fn: fn(GameState) -> GameState) -> Gam
     return next_fn(state);
 }
 
-fn draw_statistics(state: GameState, next_fn: fn(GameState) -> GameState) -> GameState {
+fn draw_statistics(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
     draw_text(
         format!("COINS: {}", state.coins).as_str(),
         10.,
@@ -156,9 +167,77 @@ fn draw_statistics(state: GameState, next_fn: fn(GameState) -> GameState) -> Gam
     return next_fn(state);
 }
 
+fn spawn_balloon(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+    let mut next_state = state.clone();
+
+    next_state.balloons.push(new_balloon());
+
+    return next_fn(next_state);
+}
+
+fn handle_spawn_timer(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+    let mut next_state = state.clone();
+
+    next_state.spawn_timer += state.delta_time;
+
+    if next_state.spawn_timer > 1. {
+        next_state.spawn_timer -= 1.;
+        return spawn_balloon(next_state, next_fn);
+    }
+
+    return next_fn(next_state);
+}
+
+fn update_balloons(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+    let mut next_state = state.clone();
+
+    next_state.balloons = next_state
+        .balloons
+        .iter()
+        .map(|balloon| update_balloon(balloon.clone(), state.delta_time))
+        .collect();
+
+    return next_fn(next_state);
+}
+
+fn draw_balloons(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+    let next_state = state.clone();
+
+    for balloon in next_state.balloons.iter() {
+        draw_balloon(
+            balloon.clone(),
+            state.balloon_sprite.as_ref().unwrap().clone(),
+        );
+    }
+
+    return next_fn(next_state);
+}
+
+fn update_delta_time(
+    state: GameState,
+    delta_time: f32,
+    next_fn: fn(GameState) -> GameState,
+) -> GameState {
+    let mut next_state = state.clone();
+
+    next_state.delta_time = delta_time;
+
+    return next_fn(next_state);
+}
+
 pub fn update_scene(delta_time: f32, state: GameState) -> GameState {
     match state.game_over {
-        true => draw_game_over(state, |state| state),
-        false => draw_background(state, |state| draw_statistics(state, |state| state)),
+        true => update_delta_time(state, delta_time, |state| {
+            draw_game_over(state, |state| state)
+        }),
+        false => update_delta_time(state, delta_time, |state| {
+            draw_background(state, |state| {
+                handle_spawn_timer(state, |state| {
+                    update_balloons(state, |state| {
+                        draw_balloons(state, |state| draw_statistics(state, |state| state))
+                    })
+                })
+            })
+        }),
     }
 }
