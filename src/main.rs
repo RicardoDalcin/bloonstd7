@@ -7,19 +7,26 @@ use functional::Scene::init_scene;
 use functional::Scene::new_scene;
 use functional::Scene::update_scene;
 
-use object_oriented::Scene::Scene;
+// use object_oriented::Scene::Scene;
 
 #[macroquad::main("Balloons")]
 async fn main() {
-    // let mut scene = Scene::new().await;
-
     let mut scene = new_scene();
+    scene = init_scene(scene).await;
 
     loop {
-        // scene.update(get_frame_time());
-
-        update_scene(get_frame_time(), &mut scene);
-
+        scene = update_scene(get_frame_time(), scene);
         next_frame().await;
     }
 }
+
+// #[macroquad::main("Balloons")]
+// async fn main() {
+//     let mut scene = Scene::new().await;
+
+//     loop {
+//         scene.update(get_frame_time());
+
+//         next_frame().await;
+//     }
+// }
