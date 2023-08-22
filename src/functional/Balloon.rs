@@ -33,7 +33,7 @@ const BALLOON_SPEED: f32 = 150.;
 pub struct Balloon {
     position: Vec2,
     direction: Direction,
-    state: BalloonState,
+    pub state: BalloonState,
 }
 
 pub fn new_balloon() -> Balloon {
@@ -53,6 +53,13 @@ pub fn update_balloon(balloon: Balloon, delta_time: f32) -> Balloon {
     }
 
     return next_balloon;
+}
+
+pub fn has_escaped(balloon: Balloon) -> bool {
+    let position = balloon.position;
+    let size = BALLOON_COLLIDER_SIZE;
+
+    return position.x > screen_width() + size || position.x < -size;
 }
 
 pub fn draw_balloon(balloon: Balloon, balloon_texture: Texture2D) {
