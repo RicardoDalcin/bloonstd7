@@ -5,6 +5,8 @@ use crate::object_oriented::Balloon::Balloon;
 use crate::object_oriented::Balloon::BalloonState;
 use crate::object_oriented::Tower::Tower;
 
+use super::DrawableObject::DrawableObject;
+
 struct Sprites {
     background: Texture2D,
     balloon: Texture2D,
@@ -159,7 +161,7 @@ impl Scene {
                 self.preview_tower
                     .as_mut()
                     .unwrap()
-                    .draw(self.coins < TOWER_COST);
+                    .draw(None, Some(self.coins < TOWER_COST));
 
                 if is_mouse_button_down(MouseButton::Left) && self.coins >= TOWER_COST {
                     self.towers
@@ -230,14 +232,14 @@ impl Scene {
     fn update_balloons(&mut self, delta_time: f32) {
         for balloon in &mut self.balloons {
             balloon.update(delta_time);
-            balloon.draw(&self.sprites.balloon);
+            balloon.draw(Some(&self.sprites.balloon), None);
         }
     }
 
     fn update_towers(&mut self, delta_time: f32) {
         for tower in &mut self.towers {
             tower.update(delta_time);
-            tower.draw(false);
+            tower.draw(None, Some(false));
 
             for projectile in &mut tower.get_projectiles().iter_mut() {
                 projectile.update(delta_time);

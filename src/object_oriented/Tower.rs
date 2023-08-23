@@ -1,3 +1,4 @@
+use crate::object_oriented::DrawableObject::DrawableObject;
 use macroquad::prelude::*;
 
 use crate::object_oriented::Projectile::Projectile;
@@ -80,9 +81,11 @@ impl Tower {
             self.level += 1;
         }
     }
+}
 
-    pub fn draw(&self, is_disabled: bool) {
-        let color = if is_disabled {
+impl DrawableObject for Tower {
+    fn draw(&self, sprite: Option<&Texture2D>, is_disabled: Option<bool>) {
+        let color = if is_disabled.unwrap() {
             GRAY
         } else {
             match self.level {

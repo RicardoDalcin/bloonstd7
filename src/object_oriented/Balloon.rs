@@ -1,3 +1,4 @@
+use crate::object_oriented::DrawableObject::DrawableObject;
 use macroquad::prelude::*;
 
 #[derive(Copy, Clone)]
@@ -67,10 +68,12 @@ impl Balloon {
     pub fn set_state(&mut self, state: BalloonState) {
         self.state = state;
     }
+}
 
-    pub fn draw(&self, balloon_sprite: &Texture2D) {
+impl DrawableObject for Balloon {
+    fn draw(&self, sprite: Option<&Texture2D>, is_disabled: Option<bool>) {
         draw_texture_ex(
-            &balloon_sprite,
+            sprite.unwrap(),
             self.position.x - BALLOON_SIZE / 2.,
             screen_height() / 2. - (BALLOON_SIZE / 2.),
             WHITE,
