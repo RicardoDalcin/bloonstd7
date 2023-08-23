@@ -1,7 +1,6 @@
 use macroquad::prelude::*;
 
 use crate::functional::Projectile::new_projectile;
-use crate::functional::Projectile::update_projectile;
 use crate::functional::Projectile::Projectile;
 
 #[derive(Clone)]

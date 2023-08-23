@@ -20,12 +20,22 @@ use super::Projectile::draw_projectile;
 use super::Projectile::hit_projectile;
 use super::Projectile::is_projectile_alive;
 use super::Projectile::is_projectile_hit;
-use super::Projectile::new_projectile;
 use super::Projectile::update_projectile;
+
+#[derive(Clone)]
+pub struct Keys {
+    pub tower_placement: bool,
+    pub cancel_tower_placement: bool,
+    pub place_tower: bool,
+    pub rotate_tower_clockwise: bool,
+    pub rotate_tower_counter_clockwise: bool,
+    pub reset: bool,
+}
 
 #[derive(Clone)]
 pub struct GameState {
     delta_time: f32,
+    keys: Keys,
     balloon_sprite: Option<Texture2D>,
     background_sprite: Option<Texture2D>,
     coins: u32,
@@ -40,6 +50,14 @@ pub struct GameState {
 
 const INITIAL_STATE: GameState = GameState {
     delta_time: 0.0,
+    keys: Keys {
+        tower_placement: false,
+        cancel_tower_placement: false,
+        place_tower: false,
+        rotate_tower_clockwise: false,
+        rotate_tower_counter_clockwise: false,
+        reset: false,
+    },
     balloon_sprite: None,
     background_sprite: None,
     coins: 30,
@@ -88,18 +106,27 @@ pub async fn init_scene(state: GameState) -> GameState {
 }
 
 fn reset(state: GameState) -> GameState {
-    let mut next_state = state.clone();
-
-    next_state.coins = 30;
-    next_state.lives = 3;
-    next_state.game_over = false;
-    next_state.spawn_timer = 0.0;
-    next_state.is_placing_tower = false;
-
-    next_state.balloons.clear();
-    next_state.towers.clear();
-
-    return next_state;
+    GameState {
+        delta_time: 0.0,
+        keys: Keys {
+            tower_placement: false,
+            cancel_tower_placement: false,
+            place_tower: false,
+            rotate_tower_clockwise: false,
+            rotate_tower_counter_clockwise: false,
+            reset: false,
+        },
+        balloon_sprite: state.balloon_sprite,
+        background_sprite: state.background_sprite,
+        coins: 30,
+        lives: 3,
+        game_over: false,
+        spawn_timer: 0.0,
+        is_placing_tower: false,
+        preview_tower: None,
+        balloons: Vec::new(),
+        towers: Vec::new(),
+    }
 }
 
 fn draw_game_over(state: GameState) -> GameState {
@@ -118,11 +145,11 @@ fn draw_game_over(state: GameState) -> GameState {
         DARKGRAY,
     );
 
-    if is_key_down(KeyCode::Enter) {
+    if state.keys.reset {
         return reset(state);
     }
 
-    return state;
+    state
 }
 
 fn draw_background(state: GameState) -> GameState {
@@ -152,7 +179,7 @@ fn draw_background(state: GameState) -> GameState {
         },
     );
 
-    return state;
+    state
 }
 
 fn draw_statistics(state: GameState) -> GameState {
@@ -172,102 +199,117 @@ fn draw_statistics(state: GameState) -> GameState {
         WHITE,
     );
 
-    return state;
+    state
 }
 
 fn spawn_balloon(state: GameState) -> GameState {
-    let mut next_state = state.clone();
-
-    next_state.balloons.push(new_balloon());
-
-    return next_state;
+    GameState {
+        balloons: state
+            .balloons
+            .iter()
+            .chain(std::iter::once(&new_balloon()))
+            .cloned()
+            .collect(),
+        ..state
+    }
 }
 
 fn handle_spawn_timer(state: GameState) -> GameState {
-    let mut next_state = state.clone();
+    let new_state = GameState {
+        spawn_timer: state.spawn_timer + state.delta_time,
+        ..state
+    };
 
-    next_state.spawn_timer += state.delta_time;
-
-    if next_state.spawn_timer > 1. {
-        next_state.spawn_timer -= 1.;
-        return spawn_balloon(next_state);
+    if new_state.spawn_timer > 1. {
+        return spawn_balloon(GameState {
+            spawn_timer: new_state.spawn_timer - 1.,
+            ..new_state
+        });
     }
 
-    return next_state;
+    return new_state;
 }
 
 fn update_balloons(state: GameState) -> GameState {
-    let mut next_state = state.clone();
-
-    next_state.balloons = next_state
-        .balloons
-        .iter()
-        .map(|balloon| update_balloon(balloon.clone(), state.delta_time))
-        .collect();
-
-    return next_state;
+    GameState {
+        balloons: state
+            .balloons
+            .iter()
+            .map(|balloon| update_balloon(balloon.clone(), state.delta_time))
+            .collect(),
+        ..state
+    }
 }
 
 fn draw_balloons(state: GameState) -> GameState {
-    let next_state = state.clone();
-
-    for balloon in next_state.balloons.iter() {
+    for balloon in state.balloons.iter() {
         draw_balloon(
             balloon.clone(),
             state.balloon_sprite.as_ref().unwrap().clone(),
         );
     }
 
-    return next_state;
+    state
 }
 
 fn clear_balloons(state: GameState) -> GameState {
-    let mut next_state = state.clone();
+    let mut new_state = GameState {
+        balloons: state
+            .balloons
+            .iter()
+            .map(|balloon| {
+                if has_escaped(balloon.clone()) {
+                    let mut next_balloon = balloon.clone();
 
-    next_state.balloons = next_state
-        .balloons
-        .iter()
-        .map(|balloon| {
-            if has_escaped(balloon.clone()) {
-                let mut next_balloon = balloon.clone();
+                    next_balloon.state = BalloonState::Escaped;
 
-                next_balloon.state = BalloonState::Escaped;
+                    return next_balloon;
+                }
 
-                return next_balloon;
-            }
+                return balloon.clone();
+            })
+            .collect(),
+        ..state
+    };
 
-            return balloon.clone();
-        })
-        .collect();
-
-    let escaped_balloons = next_state
+    let escaped_balloons = new_state
         .balloons
         .iter()
         .filter(|balloon| balloon.state == BalloonState::Escaped)
         .count();
 
-    next_state.lives -= escaped_balloons as i32;
+    new_state = GameState {
+        lives: new_state.lives - escaped_balloons as i32,
+        ..new_state
+    };
 
-    if next_state.lives <= 0 {
-        next_state.game_over = true;
+    if new_state.lives <= 0 {
+        new_state = GameState {
+            game_over: true,
+            ..new_state
+        };
     }
 
-    next_state
-        .balloons
-        .retain(|balloon| balloon.state == BalloonState::Alive);
-
-    return next_state;
+    GameState {
+        balloons: new_state
+            .balloons
+            .iter()
+            .filter(|balloon| balloon.state == BalloonState::Alive)
+            .cloned()
+            .collect(),
+        ..new_state
+    }
 }
 
 fn handle_tower_placement(state: GameState) -> GameState {
     let mut next_state = state.clone();
 
-    if is_key_pressed(KeyCode::Escape) {
+    if state.keys.cancel_tower_placement {
         next_state.is_placing_tower = false;
         next_state.preview_tower = None;
     }
 
-    if is_key_pressed(KeyCode::T) {
+    if state.keys.tower_placement {
         let mouse_position = mouse_position();
 
         next_state.is_placing_tower = true;
@@ -277,10 +319,10 @@ fn handle_tower_placement(state: GameState) -> GameState {
     if next_state.is_placing_tower {
         let mut new_preview_tower = next_state.preview_tower.unwrap().clone();
 
-        if is_key_down(KeyCode::R) {
+        if state.keys.rotate_tower_clockwise {
             let new_tower_angle = new_preview_tower.angle + 5. * state.delta_time;
             new_preview_tower.angle = new_tower_angle;
-        } else if is_key_down(KeyCode::E) {
+        } else if state.keys.rotate_tower_counter_clockwise {
             let new_tower_angle = new_preview_tower.angle - 5. * state.delta_time;
             new_preview_tower.angle = new_tower_angle;
         }
@@ -289,7 +331,7 @@ fn handle_tower_placement(state: GameState) -> GameState {
 
         draw_tower(new_preview_tower.clone(), next_state.coins < TOWER_COST);
 
-        if is_mouse_button_down(MouseButton::Left) && next_state.coins >= TOWER_COST {
+        if state.keys.place_tower && next_state.coins >= TOWER_COST {
             next_state.towers.push(new_preview_tower.clone());
 
             next_state.is_placing_tower = false;
@@ -400,16 +442,17 @@ fn clean_projectiles(state: GameState) -> GameState {
     return next_state;
 }
 
-fn update_delta_time(
+fn update_stateful(
     state: GameState,
     delta_time: f32,
+    keys: Keys,
     next_fn: fn(GameState) -> GameState,
 ) -> GameState {
-    let mut next_state = state.clone();
-
-    next_state.delta_time = delta_time;
-
-    return next_fn(next_state);
+    next_fn(GameState {
+        delta_time,
+        keys,
+        ..state
+    })
 }
 
 pub fn pipe(actions: Vec<fn(GameState) -> GameState>, initial_state: GameState) -> GameState {
@@ -418,10 +461,10 @@ pub fn pipe(actions: Vec<fn(GameState) -> GameState>, initial_state: GameState) 
         .fold(initial_state, |state, action| action(state))
 }
 
-pub fn update_scene(delta_time: f32, state: GameState) -> GameState {
+pub fn update_scene(delta_time: f32, keys: Keys, state: GameState) -> GameState {
     match state.game_over {
-        true => update_delta_time(state, delta_time, |state| draw_game_over(state)),
-        false => update_delta_time(state, delta_time, |state| {
+        true => update_stateful(state, delta_time, keys, |state| draw_game_over(state)),
+        false => update_stateful(state, delta_time, keys, |state| {
             pipe(
                 vec![
                     draw_background,
