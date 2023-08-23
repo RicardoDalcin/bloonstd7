@@ -9,6 +9,11 @@ use crate::functional::Balloon::update_balloon;
 use crate::functional::Balloon::Balloon;
 use crate::functional::Balloon::BalloonState;
 
+use crate::functional::Tower::draw_tower;
+use crate::functional::Tower::new_tower;
+use crate::functional::Tower::update_tower;
+use crate::functional::Tower::Tower;
+
 #[derive(Clone)]
 pub struct GameState {
     delta_time: f32,
@@ -18,7 +23,10 @@ pub struct GameState {
     lives: i32,
     game_over: bool,
     spawn_timer: f32,
+    is_placing_tower: bool,
+    preview_tower: Option<Tower>,
     balloons: Vec<Balloon>,
+    towers: Vec<Tower>,
 }
 
 const INITIAL_STATE: GameState = GameState {
@@ -29,8 +37,13 @@ const INITIAL_STATE: GameState = GameState {
     lives: 3,
     game_over: false,
     spawn_timer: 0.0,
+    is_placing_tower: false,
+    preview_tower: None,
     balloons: Vec::new(),
+    towers: Vec::new(),
 };
+
+const TOWER_COST: u32 = 15;
 
 pub fn new_scene() -> GameState {
     INITIAL_STATE
@@ -85,8 +98,10 @@ fn reset(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameStat
     next_state.lives = 3;
     next_state.game_over = false;
     next_state.spawn_timer = 0.0;
+    next_state.is_placing_tower = false;
 
     next_state.balloons.clear();
+    next_state.towers.clear();
 
     return next_fn(next_state);
 }
@@ -248,6 +263,69 @@ fn clear_balloons(state: GameState, next_fn: impl Fn(GameState) -> GameState) ->
     return next_fn(next_state);
 }
 
+fn handle_tower_placement(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+    let mut next_state = state.clone();
+
+    if is_key_pressed(KeyCode::Escape) {
+        next_state.is_placing_tower = false;
+        next_state.preview_tower = None;
+    }
+
+    if is_key_pressed(KeyCode::T) {
+        let mouse_position = mouse_position();
+
+        next_state.is_placing_tower = true;
+        next_state.preview_tower = Some(new_tower(Vec2::new(mouse_position.0, mouse_position.1)));
+    }
+
+    if next_state.is_placing_tower {
+        if is_key_down(KeyCode::R) {
+            let new_tower_angle = next_state.preview_tower.unwrap().angle + 5. * state.delta_time;
+            next_state.preview_tower.as_mut().unwrap().angle = new_tower_angle;
+        } else if is_key_down(KeyCode::E) {
+            let new_tower_angle = next_state.preview_tower.unwrap().angle - 5. * state.delta_time;
+            next_state.preview_tower.as_mut().unwrap().angle = new_tower_angle;
+        }
+
+        next_state.preview_tower.as_mut().unwrap().position =
+            Vec2::new(mouse_position().0, mouse_position().1);
+
+        draw_tower(
+            next_state.preview_tower.unwrap().clone(),
+            next_state.coins < TOWER_COST,
+        );
+
+        if is_mouse_button_down(MouseButton::Left) && next_state.coins >= TOWER_COST {
+            next_state
+                .towers
+                .push(next_state.preview_tower.unwrap().clone());
+
+            next_state.is_placing_tower = false;
+            next_state.preview_tower = None;
+            next_state.coins -= TOWER_COST;
+        }
+    }
+
+    return next_fn(next_state);
+}
+
+fn update_towers(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+    let mut next_state = state.clone();
+
+    next_state.towers = next_state
+        .towers
+        .iter()
+        .map(|tower| update_tower(tower.clone(), state.delta_time))
+        .collect();
+
+    next_state
+        .towers
+        .iter()
+        .for_each(|tower| draw_tower(tower.clone(), false));
+
+    return next_fn(next_state);
+}
+
 fn update_delta_time(
     state: GameState,
     delta_time: f32,
@@ -268,9 +346,15 @@ pub fn update_scene(delta_time: f32, state: GameState) -> GameState {
         false => update_delta_time(state, delta_time, |state| {
             draw_background(state, |state| {
                 handle_spawn_timer(state, |state| {
-                    update_balloons(state, |state| {
-                        draw_balloons(state, |state| {
-                            clear_balloons(state, |state| draw_statistics(state, |state| state))
+                    handle_tower_placement(state, |state| {
+                        update_balloons(state, |state| {
+                            update_towers(state, |state| {
+                                draw_balloons(state, |state| {
+                                    clear_balloons(state, |state| {
+                                        draw_statistics(state, |state| state)
+                                    })
+                                })
+                            })
                         })
                     })
                 })

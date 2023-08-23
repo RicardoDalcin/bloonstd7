@@ -121,6 +121,10 @@ impl Scene {
                 self.is_placing_tower = true;
             }
 
+            if is_key_down(KeyCode::Escape) {
+                self.is_placing_tower = false;
+            }
+
             if self.is_placing_tower {
                 let mouse_position = mouse_position();
 
