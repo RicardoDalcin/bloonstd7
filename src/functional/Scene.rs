@@ -87,20 +87,7 @@ pub async fn init_scene(state: GameState) -> GameState {
     return next_state;
 }
 
-// fn run_loop(
-//     state: GameState,
-//     next_fn: Option<fn(GameState) -> GameState>,
-//     produceFn: fn(GameState) -> GameState,
-// ) {
-//     let mut next_state = produceFn(state.clone());
-
-//     return match next_fn {
-//         Some(next) => next(next_state),
-//         None => next_state,
-//     };
-// }
-
-fn reset(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+fn reset(state: GameState) -> GameState {
     let mut next_state = state.clone();
 
     next_state.coins = 30;
@@ -112,10 +99,10 @@ fn reset(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameStat
     next_state.balloons.clear();
     next_state.towers.clear();
 
-    return next_fn(next_state);
+    return next_state;
 }
 
-fn draw_game_over(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+fn draw_game_over(state: GameState) -> GameState {
     clear_background(LIGHTGRAY);
 
     clear_background(WHITE);
@@ -132,13 +119,13 @@ fn draw_game_over(state: GameState, next_fn: impl Fn(GameState) -> GameState) ->
     );
 
     if is_key_down(KeyCode::Enter) {
-        return reset(state, next_fn);
+        return reset(state);
     }
 
-    return next_fn(state);
+    return state;
 }
 
-fn draw_background(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+fn draw_background(state: GameState) -> GameState {
     clear_background(LIGHTGRAY);
 
     if state.background_sprite.is_none() {
@@ -165,10 +152,10 @@ fn draw_background(state: GameState, next_fn: impl Fn(GameState) -> GameState) -
         },
     );
 
-    return next_fn(state);
+    return state;
 }
 
-fn draw_statistics(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+fn draw_statistics(state: GameState) -> GameState {
     draw_text(
         format!("COINS: {}", state.coins).as_str(),
         10.,
@@ -185,31 +172,31 @@ fn draw_statistics(state: GameState, next_fn: impl Fn(GameState) -> GameState) -
         WHITE,
     );
 
-    return next_fn(state);
+    return state;
 }
 
-fn spawn_balloon(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+fn spawn_balloon(state: GameState) -> GameState {
     let mut next_state = state.clone();
 
     next_state.balloons.push(new_balloon());
 
-    return next_fn(next_state);
+    return next_state;
 }
 
-fn handle_spawn_timer(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+fn handle_spawn_timer(state: GameState) -> GameState {
     let mut next_state = state.clone();
 
     next_state.spawn_timer += state.delta_time;
 
     if next_state.spawn_timer > 1. {
         next_state.spawn_timer -= 1.;
-        return spawn_balloon(next_state, next_fn);
+        return spawn_balloon(next_state);
     }
 
-    return next_fn(next_state);
+    return next_state;
 }
 
-fn update_balloons(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+fn update_balloons(state: GameState) -> GameState {
     let mut next_state = state.clone();
 
     next_state.balloons = next_state
@@ -218,10 +205,10 @@ fn update_balloons(state: GameState, next_fn: impl Fn(GameState) -> GameState) -
         .map(|balloon| update_balloon(balloon.clone(), state.delta_time))
         .collect();
 
-    return next_fn(next_state);
+    return next_state;
 }
 
-fn draw_balloons(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+fn draw_balloons(state: GameState) -> GameState {
     let next_state = state.clone();
 
     for balloon in next_state.balloons.iter() {
@@ -231,10 +218,10 @@ fn draw_balloons(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> 
         );
     }
 
-    return next_fn(next_state);
+    return next_state;
 }
 
-fn clear_balloons(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+fn clear_balloons(state: GameState) -> GameState {
     let mut next_state = state.clone();
 
     next_state.balloons = next_state
@@ -269,10 +256,10 @@ fn clear_balloons(state: GameState, next_fn: impl Fn(GameState) -> GameState) ->
         .balloons
         .retain(|balloon| balloon.state == BalloonState::Alive);
 
-    return next_fn(next_state);
+    return next_state;
 }
 
-fn handle_tower_placement(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+fn handle_tower_placement(state: GameState) -> GameState {
     let mut next_state = state.clone();
 
     if is_key_pressed(KeyCode::Escape) {
@@ -313,10 +300,10 @@ fn handle_tower_placement(state: GameState, next_fn: impl Fn(GameState) -> GameS
         next_state.preview_tower = Some(new_preview_tower);
     }
 
-    return next_fn(next_state);
+    return next_state;
 }
 
-fn update_towers(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+fn update_towers(state: GameState) -> GameState {
     let mut next_state = state.clone();
 
     next_state.towers = next_state
@@ -344,10 +331,10 @@ fn update_towers(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> 
             .for_each(|projectile| draw_projectile(projectile.clone()));
     });
 
-    return next_fn(next_state);
+    return next_state;
 }
 
-fn handle_popping(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+fn handle_popping(state: GameState) -> GameState {
     let mut next_state = state.clone();
 
     next_state.towers = next_state
@@ -378,10 +365,10 @@ fn handle_popping(state: GameState, next_fn: impl Fn(GameState) -> GameState) ->
         })
         .collect();
 
-    return next_fn(next_state);
+    return next_state;
 }
 
-fn clean_projectiles(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> GameState {
+fn clean_projectiles(state: GameState) -> GameState {
     let mut next_state = state.clone();
 
     next_state.towers = next_state
@@ -410,7 +397,7 @@ fn clean_projectiles(state: GameState, next_fn: impl Fn(GameState) -> GameState)
         })
         .collect();
 
-    return next_fn(next_state);
+    return next_state;
 }
 
 fn update_delta_time(
@@ -425,31 +412,31 @@ fn update_delta_time(
     return next_fn(next_state);
 }
 
+pub fn pipe(actions: Vec<fn(GameState) -> GameState>, initial_state: GameState) -> GameState {
+    actions
+        .into_iter()
+        .fold(initial_state, |state, action| action(state))
+}
+
 pub fn update_scene(delta_time: f32, state: GameState) -> GameState {
     match state.game_over {
-        true => update_delta_time(state, delta_time, |state| {
-            draw_game_over(state, |state| state)
-        }),
+        true => update_delta_time(state, delta_time, |state| draw_game_over(state)),
         false => update_delta_time(state, delta_time, |state| {
-            draw_background(state, |state| {
-                handle_spawn_timer(state, |state| {
-                    handle_tower_placement(state, |state| {
-                        update_balloons(state, |state| {
-                            update_towers(state, |state| {
-                                draw_balloons(state, |state| {
-                                    handle_popping(state, |state| {
-                                        clean_projectiles(state, |state| {
-                                            clear_balloons(state, |state| {
-                                                draw_statistics(state, |state| state)
-                                            })
-                                        })
-                                    })
-                                })
-                            })
-                        })
-                    })
-                })
-            })
+            pipe(
+                vec![
+                    draw_background,
+                    handle_spawn_timer,
+                    handle_tower_placement,
+                    update_balloons,
+                    update_towers,
+                    draw_balloons,
+                    handle_popping,
+                    clean_projectiles,
+                    clear_balloons,
+                    draw_statistics,
+                ],
+                state,
+            )
         }),
     }
 }
