@@ -1,11 +1,15 @@
 use macroquad::prelude::*;
 
-#[derive(Clone, Copy)]
+use crate::functional::Projectile::new_projectile;
+use crate::functional::Projectile::update_projectile;
+use crate::functional::Projectile::Projectile;
+
+#[derive(Clone)]
 pub struct Tower {
     pub position: Vec2,
     pub angle: f32,
     shot_cooldown: f32,
-    // projectiles: Vec<Projectile>,
+    pub projectiles: Vec<Projectile>,
     pop_count: u32,
     level: u32,
 }
@@ -17,7 +21,7 @@ pub fn new_tower(position: Vec2) -> Tower {
         position,
         angle: 0.,
         shot_cooldown: 0.,
-        // projectiles: Vec::new(),
+        projectiles: Vec::new(),
         pop_count: 0,
         level: 1,
     }
@@ -29,12 +33,12 @@ pub fn update_tower(tower: Tower, delta_time: f32) -> Tower {
     next_tower.shot_cooldown -= delta_time;
 
     if next_tower.shot_cooldown < 0. {
-        // let new_projectile = Projectile::new(
-        //   Vec2::new(self.position.x, self.position.y),
-        //   Vec2::new(self.angle.cos(), self.angle.sin()),
-        // );
+        let new_projectile = new_projectile(
+            Vec2::new(next_tower.position.x, next_tower.position.y),
+            Vec2::new(next_tower.angle.cos(), next_tower.angle.sin()),
+        );
 
-        // self.projectiles.push(new_projectile);
+        next_tower.projectiles.push(new_projectile);
         next_tower.shot_cooldown += 2. / next_tower.level as f32;
     }
 

@@ -14,6 +14,11 @@ use crate::functional::Tower::new_tower;
 use crate::functional::Tower::update_tower;
 use crate::functional::Tower::Tower;
 
+use super::Projectile::draw_projectile;
+use super::Projectile::is_projectile_alive;
+use super::Projectile::is_projectile_hit;
+use super::Projectile::update_projectile;
+
 #[derive(Clone)]
 pub struct GameState {
     delta_time: f32,
@@ -279,31 +284,29 @@ fn handle_tower_placement(state: GameState, next_fn: impl Fn(GameState) -> GameS
     }
 
     if next_state.is_placing_tower {
+        let mut new_preview_tower = next_state.preview_tower.unwrap().clone();
+
         if is_key_down(KeyCode::R) {
-            let new_tower_angle = next_state.preview_tower.unwrap().angle + 5. * state.delta_time;
-            next_state.preview_tower.as_mut().unwrap().angle = new_tower_angle;
+            let new_tower_angle = new_preview_tower.angle + 5. * state.delta_time;
+            new_preview_tower.angle = new_tower_angle;
         } else if is_key_down(KeyCode::E) {
-            let new_tower_angle = next_state.preview_tower.unwrap().angle - 5. * state.delta_time;
-            next_state.preview_tower.as_mut().unwrap().angle = new_tower_angle;
+            let new_tower_angle = new_preview_tower.angle - 5. * state.delta_time;
+            new_preview_tower.angle = new_tower_angle;
         }
 
-        next_state.preview_tower.as_mut().unwrap().position =
-            Vec2::new(mouse_position().0, mouse_position().1);
+        new_preview_tower.position = Vec2::new(mouse_position().0, mouse_position().1);
 
-        draw_tower(
-            next_state.preview_tower.unwrap().clone(),
-            next_state.coins < TOWER_COST,
-        );
+        draw_tower(new_preview_tower.clone(), next_state.coins < TOWER_COST);
 
         if is_mouse_button_down(MouseButton::Left) && next_state.coins >= TOWER_COST {
-            next_state
-                .towers
-                .push(next_state.preview_tower.unwrap().clone());
+            next_state.towers.push(new_preview_tower.clone());
 
             next_state.is_placing_tower = false;
             next_state.preview_tower = None;
             next_state.coins -= TOWER_COST;
         }
+
+        next_state.preview_tower = Some(new_preview_tower);
     }
 
     return next_fn(next_state);
@@ -314,14 +317,28 @@ fn update_towers(state: GameState, next_fn: impl Fn(GameState) -> GameState) -> 
 
     next_state.towers = next_state
         .towers
-        .iter()
-        .map(|tower| update_tower(tower.clone(), state.delta_time))
+        .iter_mut()
+        .map(|tower| {
+            let mut new_tower = update_tower(tower.clone(), state.delta_time);
+
+            new_tower.projectiles = new_tower
+                .projectiles
+                .iter_mut()
+                .map(|projectile| update_projectile(projectile.clone(), state.delta_time))
+                .collect();
+
+            return new_tower.clone();
+        })
         .collect();
 
-    next_state
-        .towers
-        .iter()
-        .for_each(|tower| draw_tower(tower.clone(), false));
+    next_state.towers.iter().for_each(|tower| {
+        draw_tower(tower.clone(), false);
+
+        tower
+            .projectiles
+            .iter()
+            .for_each(|projectile| draw_projectile(projectile.clone()));
+    });
 
     return next_fn(next_state);
 }
