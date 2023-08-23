@@ -45,6 +45,17 @@ pub fn update_tower(tower: Tower, delta_time: f32) -> Tower {
     return next_tower;
 }
 
+pub fn increase_tower_pop_count(tower: Tower, pop_count: u32) -> Tower {
+    let mut next_tower = tower.clone();
+    next_tower.pop_count += pop_count;
+
+    if next_tower.pop_count % 10 == 0 {
+        next_tower.level += 1;
+    }
+
+    return next_tower;
+}
+
 pub fn draw_tower(tower: Tower, is_disabled: bool) {
     let color = if is_disabled {
         GRAY

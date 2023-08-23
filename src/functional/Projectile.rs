@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
 
 use crate::functional::Balloon::Balloon;
+use crate::functional::Balloon::BALLOON_COLLIDER_SIZE;
 
 #[derive(Copy, Clone)]
 pub enum ProjectileState {
@@ -69,4 +70,17 @@ pub fn draw_projectile(projectile: Projectile) {
         PROJECTILE_SIZE,
         ORANGE,
     );
+}
+
+pub fn check_collision(projectile: Projectile, balloon: Balloon) -> bool {
+    let distance_x = (projectile.position.x - balloon.position.x).abs();
+    let distance_y = (projectile.position.y - balloon.position.y).abs();
+
+    if distance_x > BALLOON_COLLIDER_SIZE + PROJECTILE_SIZE
+        || distance_y > BALLOON_COLLIDER_SIZE + PROJECTILE_SIZE
+    {
+        return false;
+    }
+
+    return true;
 }

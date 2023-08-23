@@ -26,12 +26,12 @@ impl PartialEq for BalloonState {
 
 const BALLOON_SPRITE_SIZE: f32 = 48.;
 const BALLOON_SIZE: f32 = BALLOON_SPRITE_SIZE * 3.;
-const BALLOON_COLLIDER_SIZE: f32 = BALLOON_SIZE / 2.;
+pub const BALLOON_COLLIDER_SIZE: f32 = BALLOON_SIZE / 2.;
 const BALLOON_SPEED: f32 = 150.;
 
 #[derive(Copy, Clone)]
 pub struct Balloon {
-    position: Vec2,
+    pub position: Vec2,
     direction: Direction,
     pub state: BalloonState,
 }
