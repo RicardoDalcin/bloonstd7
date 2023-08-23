@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 
-use crate::functional::Projectile::new_projectile;
-use crate::functional::Projectile::Projectile;
+use crate::functional::projectile::new_projectile;
+use crate::functional::projectile::Projectile;
 
 #[derive(Clone)]
 pub struct Tower {
@@ -27,32 +27,49 @@ pub fn new_tower(position: Vec2) -> Tower {
 }
 
 pub fn update_tower(tower: Tower, delta_time: f32) -> Tower {
-    let mut next_tower = tower.clone();
+    let new_shot_cooldown = tower.shot_cooldown - delta_time;
 
-    next_tower.shot_cooldown -= delta_time;
-
-    if next_tower.shot_cooldown < 0. {
+    let (new_shot_cooldown, new_projectiles) = if new_shot_cooldown < 0. {
         let new_projectile = new_projectile(
-            Vec2::new(next_tower.position.x, next_tower.position.y),
-            Vec2::new(next_tower.angle.cos(), next_tower.angle.sin()),
+            Vec2::new(tower.position.x, tower.position.y),
+            Vec2::new(tower.angle.cos(), tower.angle.sin()),
         );
 
-        next_tower.projectiles.push(new_projectile);
-        next_tower.shot_cooldown += 2. / next_tower.level as f32;
-    }
+        (
+            new_shot_cooldown + 2. / tower.level as f32,
+            vec![new_projectile],
+        )
+    } else {
+        (new_shot_cooldown, vec![])
+    };
 
-    return next_tower;
+    let new_projectiles = tower
+        .projectiles
+        .into_iter()
+        .chain(new_projectiles.into_iter())
+        .collect();
+
+    Tower {
+        shot_cooldown: new_shot_cooldown,
+        projectiles: new_projectiles,
+        ..tower
+    }
 }
 
 pub fn increase_tower_pop_count(tower: Tower, pop_count: u32) -> Tower {
-    let mut next_tower = tower.clone();
-    next_tower.pop_count += pop_count;
+    let new_pop_count = tower.pop_count + pop_count;
 
-    if next_tower.pop_count % 10 == 0 {
-        next_tower.level += 1;
+    let new_level = if new_pop_count % 10 == 0 {
+        tower.level + 1
+    } else {
+        tower.level
+    };
+
+    Tower {
+        pop_count: new_pop_count,
+        level: new_level,
+        ..tower
     }
-
-    return next_tower;
 }
 
 pub fn draw_tower(tower: Tower, is_disabled: bool) {

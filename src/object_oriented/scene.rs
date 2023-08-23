@@ -1,11 +1,11 @@
 use macroquad::prelude::*;
 use std::collections::LinkedList;
 
-use crate::object_oriented::Balloon::Balloon;
-use crate::object_oriented::Balloon::BalloonState;
-use crate::object_oriented::Tower::Tower;
+use crate::object_oriented::balloon::Balloon;
+use crate::object_oriented::balloon::BalloonState;
+use crate::object_oriented::tower::Tower;
 
-use super::DrawableObject::DrawableObject;
+use super::drawable_object::DrawableObject;
 
 struct Sprites {
     background: Texture2D,

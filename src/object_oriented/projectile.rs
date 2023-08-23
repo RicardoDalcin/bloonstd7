@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 
-use crate::object_oriented::Balloon::Balloon;
+use crate::object_oriented::balloon::Balloon;
 
 #[derive(Copy, Clone)]
 pub enum ProjectileState {
@@ -52,7 +52,7 @@ impl Projectile {
             return false;
         }
 
-        return true;
+        true
     }
 
     pub fn hit(&mut self) {

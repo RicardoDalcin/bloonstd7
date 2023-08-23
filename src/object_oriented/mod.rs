@@ -1,5 +1,5 @@
-pub mod Balloon;
-pub mod DrawableObject;
-pub mod Projectile;
-pub mod Scene;
-pub mod Tower;
+pub mod balloon;
+pub mod drawable_object;
+pub mod projectile;
+pub mod scene;
+pub mod tower;

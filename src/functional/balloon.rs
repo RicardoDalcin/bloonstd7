@@ -15,12 +15,12 @@ pub enum BalloonState {
 
 impl PartialEq for BalloonState {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Alive, Self::Alive) => true,
-            (Self::Popped, Self::Popped) => true,
-            (Self::Escaped, Self::Escaped) => true,
-            _ => false,
-        }
+        matches!(
+            (self, other),
+            (Self::Alive, Self::Alive)
+                | (Self::Popped, Self::Popped)
+                | (Self::Escaped, Self::Escaped)
+        )
     }
 }
 
@@ -45,21 +45,27 @@ pub fn new_balloon() -> Balloon {
 }
 
 pub fn update_balloon(balloon: Balloon, delta_time: f32) -> Balloon {
-    let mut next_balloon = balloon.clone();
+    let current_position_x = balloon.position.x;
 
-    match next_balloon.direction {
-        Direction::Right => next_balloon.position.x += BALLOON_SPEED * delta_time,
-        Direction::Left => next_balloon.position.x -= BALLOON_SPEED * delta_time,
+    let new_position_x = match balloon.direction {
+        Direction::Right => current_position_x + BALLOON_SPEED * delta_time,
+        Direction::Left => current_position_x - BALLOON_SPEED * delta_time,
+    };
+
+    Balloon {
+        position: Vec2 {
+            x: new_position_x,
+            y: balloon.position.y,
+        },
+        ..balloon
     }
-
-    return next_balloon;
 }
 
 pub fn has_escaped(balloon: Balloon) -> bool {
     let position = balloon.position;
     let size = BALLOON_COLLIDER_SIZE;
 
-    return position.x > screen_width() + size || position.x < -size;
+    position.x > screen_width() + size || position.x < -size
 }
 
 pub fn draw_balloon(balloon: Balloon, balloon_texture: Texture2D) {

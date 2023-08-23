@@ -2,25 +2,25 @@
 
 use macroquad::prelude::*;
 
-use crate::functional::Balloon::draw_balloon;
-use crate::functional::Balloon::has_escaped;
-use crate::functional::Balloon::new_balloon;
-use crate::functional::Balloon::update_balloon;
-use crate::functional::Balloon::Balloon;
-use crate::functional::Balloon::BalloonState;
+use crate::functional::balloon::draw_balloon;
+use crate::functional::balloon::has_escaped;
+use crate::functional::balloon::new_balloon;
+use crate::functional::balloon::update_balloon;
+use crate::functional::balloon::Balloon;
+use crate::functional::balloon::BalloonState;
 
-use crate::functional::Tower::draw_tower;
-use crate::functional::Tower::increase_tower_pop_count;
-use crate::functional::Tower::new_tower;
-use crate::functional::Tower::update_tower;
-use crate::functional::Tower::Tower;
+use crate::functional::tower::draw_tower;
+use crate::functional::tower::increase_tower_pop_count;
+use crate::functional::tower::new_tower;
+use crate::functional::tower::update_tower;
+use crate::functional::tower::Tower;
 
-use super::Projectile::check_collision;
-use super::Projectile::draw_projectile;
-use super::Projectile::hit_projectile;
-use super::Projectile::is_projectile_alive;
-use super::Projectile::is_projectile_hit;
-use super::Projectile::update_projectile;
+use super::projectile::check_collision;
+use super::projectile::draw_projectile;
+use super::projectile::hit_projectile;
+use super::projectile::is_projectile_alive;
+use super::projectile::is_projectile_hit;
+use super::projectile::update_projectile;
 
 #[derive(Clone)]
 pub struct Keys {
@@ -102,7 +102,7 @@ pub async fn init_scene(state: GameState) -> GameState {
         .unwrap()
         .set_filter(FilterMode::Nearest);
 
-    return next_state;
+    next_state
 }
 
 fn reset(state: GameState) -> GameState {
@@ -169,7 +169,7 @@ fn draw_background(state: GameState) -> GameState {
     let y = (screen_height() - adjusted_height) / 2.0;
 
     draw_texture_ex(
-        &sprite,
+        sprite,
         x,
         y,
         WHITE,
@@ -227,7 +227,7 @@ fn handle_spawn_timer(state: GameState) -> GameState {
         });
     }
 
-    return new_state;
+    new_state
 }
 
 fn update_balloons(state: GameState) -> GameState {
@@ -235,7 +235,7 @@ fn update_balloons(state: GameState) -> GameState {
         balloons: state
             .balloons
             .iter()
-            .map(|balloon| update_balloon(balloon.clone(), state.delta_time))
+            .map(|balloon| update_balloon(*balloon, state.delta_time))
             .collect(),
         ..state
     }
@@ -243,10 +243,7 @@ fn update_balloons(state: GameState) -> GameState {
 
 fn draw_balloons(state: GameState) -> GameState {
     for balloon in state.balloons.iter() {
-        draw_balloon(
-            balloon.clone(),
-            state.balloon_sprite.as_ref().unwrap().clone(),
-        );
+        draw_balloon(*balloon, state.balloon_sprite.as_ref().unwrap().clone());
     }
 
     state
@@ -258,15 +255,15 @@ fn clear_balloons(state: GameState) -> GameState {
             .balloons
             .iter()
             .map(|balloon| {
-                if has_escaped(balloon.clone()) {
-                    let mut next_balloon = balloon.clone();
+                if has_escaped(*balloon) {
+                    let mut next_balloon = *balloon;
 
                     next_balloon.state = BalloonState::Escaped;
 
                     return next_balloon;
                 }
 
-                return balloon.clone();
+                *balloon
             })
             .collect(),
         ..state
@@ -342,7 +339,7 @@ fn handle_tower_placement(state: GameState) -> GameState {
         next_state.preview_tower = Some(new_preview_tower);
     }
 
-    return next_state;
+    next_state
 }
 
 fn update_towers(state: GameState) -> GameState {
@@ -357,10 +354,10 @@ fn update_towers(state: GameState) -> GameState {
             new_tower.projectiles = new_tower
                 .projectiles
                 .iter_mut()
-                .map(|projectile| update_projectile(projectile.clone(), state.delta_time))
+                .map(|projectile| update_projectile(*projectile, state.delta_time))
                 .collect();
 
-            return new_tower.clone();
+            new_tower.clone()
         })
         .collect();
 
@@ -370,10 +367,10 @@ fn update_towers(state: GameState) -> GameState {
         tower
             .projectiles
             .iter()
-            .for_each(|projectile| draw_projectile(projectile.clone()));
+            .for_each(|projectile| draw_projectile(*projectile));
     });
 
-    return next_state;
+    next_state
 }
 
 fn handle_popping(state: GameState) -> GameState {
@@ -389,25 +386,25 @@ fn handle_popping(state: GameState) -> GameState {
                 .projectiles
                 .iter()
                 .map(|projectile| {
-                    let mut new_projectile = projectile.clone();
+                    let mut new_projectile = *projectile;
 
                     next_state.balloons.iter_mut().for_each(|balloon| {
-                        if check_collision(new_projectile.clone(), balloon.clone()) {
-                            new_projectile = hit_projectile(new_projectile.clone());
+                        if check_collision(new_projectile, *balloon) {
+                            new_projectile = hit_projectile(new_projectile);
                             balloon.state = BalloonState::Popped;
                             next_state.coins += 1;
                         }
                     });
 
-                    return new_projectile;
+                    new_projectile
                 })
                 .collect();
 
-            return new_tower;
+            new_tower
         })
         .collect();
 
-    return next_state;
+    next_state
 }
 
 fn clean_projectiles(state: GameState) -> GameState {
@@ -427,19 +424,17 @@ fn clean_projectiles(state: GameState) -> GameState {
 
             let projectiles_hit = projectiles_count - new_tower.projectiles.len();
 
-            new_tower
-                .projectiles
-                .retain(|projectile| is_projectile_alive(projectile));
+            new_tower.projectiles.retain(is_projectile_alive);
 
             if projectiles_hit > 0 {
                 new_tower = increase_tower_pop_count(new_tower, projectiles_hit as u32);
             }
 
-            return new_tower;
+            new_tower
         })
         .collect();
 
-    return next_state;
+    next_state
 }
 
 fn update_stateful(
@@ -463,7 +458,7 @@ pub fn pipe(actions: Vec<fn(GameState) -> GameState>, initial_state: GameState) 
 
 pub fn update_scene(delta_time: f32, keys: Keys, state: GameState) -> GameState {
     match state.game_over {
-        true => update_stateful(state, delta_time, keys, |state| draw_game_over(state)),
+        true => update_stateful(state, delta_time, keys, draw_game_over),
         false => update_stateful(state, delta_time, keys, |state| {
             pipe(
                 vec![

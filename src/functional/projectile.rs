@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 
-use crate::functional::Balloon::Balloon;
-use crate::functional::Balloon::BALLOON_COLLIDER_SIZE;
+use crate::functional::balloon::Balloon;
+use crate::functional::balloon::BALLOON_COLLIDER_SIZE;
 
 #[derive(Copy, Clone)]
 pub enum ProjectileState {
@@ -28,32 +28,31 @@ pub fn new_projectile(position: Vec2, direction: Vec2) -> Projectile {
 }
 
 pub fn update_projectile(projectile: Projectile, delta_time: f32) -> Projectile {
-    let mut projectile = projectile;
-    projectile.position += projectile.direction * 500. * delta_time;
+    let new_position = projectile.position + projectile.direction * 500. * delta_time;
 
-    if projectile.position.x < 0.
+    let new_state = if projectile.position.x < 0.
         || projectile.position.x > screen_width()
         || projectile.position.y < 0.
         || projectile.position.y > screen_height()
     {
-        projectile.state = ProjectileState::Dead;
-    }
+        ProjectileState::Dead
+    } else {
+        projectile.state
+    };
 
-    projectile
+    Projectile {
+        position: new_position,
+        state: new_state,
+        ..projectile
+    }
 }
 
 pub fn is_projectile_alive(projectile: &Projectile) -> bool {
-    match projectile.state {
-        ProjectileState::Alive => true,
-        _ => false,
-    }
+    matches!(projectile.state, ProjectileState::Alive)
 }
 
 pub fn is_projectile_hit(projectile: &Projectile) -> bool {
-    match projectile.state {
-        ProjectileState::Hit => true,
-        _ => false,
-    }
+    matches!(projectile.state, ProjectileState::Hit)
 }
 
 pub fn hit_projectile(projectile: Projectile) -> Projectile {
@@ -82,5 +81,5 @@ pub fn check_collision(projectile: Projectile, balloon: Balloon) -> bool {
         return false;
     }
 
-    return true;
+    true
 }

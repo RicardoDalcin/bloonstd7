@@ -1,7 +1,7 @@
-use crate::object_oriented::DrawableObject::DrawableObject;
+use crate::object_oriented::drawable_object::DrawableObject;
 use macroquad::prelude::*;
 
-use crate::object_oriented::Projectile::Projectile;
+use crate::object_oriented::projectile::Projectile;
 
 #[derive(Clone)]
 pub struct Tower {
@@ -66,16 +66,13 @@ impl Tower {
 
         self.projectiles.retain(|projectile| projectile.is_alive());
 
-        if (projectiles_hit > 0) {
+        if projectiles_hit > 0 {
             self.increase_pop_count(Some(projectiles_hit as u32));
         }
     }
 
     fn increase_pop_count(&mut self, pop_count: Option<u32>) {
-        self.pop_count += match pop_count {
-            Some(count) => count,
-            None => 1,
-        };
+        self.pop_count += pop_count.unwrap_or(1);
 
         if self.pop_count % 10 == 0 {
             self.level += 1;
@@ -84,7 +81,7 @@ impl Tower {
 }
 
 impl DrawableObject for Tower {
-    fn draw(&self, sprite: Option<&Texture2D>, is_disabled: Option<bool>) {
+    fn draw(&self, _sprite: Option<&Texture2D>, is_disabled: Option<bool>) {
         let color = if is_disabled.unwrap() {
             GRAY
         } else {

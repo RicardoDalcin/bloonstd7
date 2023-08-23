@@ -3,12 +3,12 @@ use macroquad::prelude::*;
 mod functional;
 mod object_oriented;
 
-use functional::Scene::init_scene;
-use functional::Scene::new_scene;
-use functional::Scene::update_scene;
-use functional::Scene::Keys;
+use functional::scene::init_scene;
+use functional::scene::new_scene;
+use functional::scene::update_scene;
+use functional::scene::Keys;
 
-// use object_oriented::Scene::Scene;
+// use object_oriented::scene::Scene;
 
 #[macroquad::main("Balloons")]
 async fn main() {

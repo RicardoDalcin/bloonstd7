@@ -1,4 +1,4 @@
-use crate::object_oriented::DrawableObject::DrawableObject;
+use crate::object_oriented::drawable_object::DrawableObject;
 use macroquad::prelude::*;
 
 #[derive(Copy, Clone)]
@@ -16,12 +16,12 @@ pub enum BalloonState {
 
 impl PartialEq for BalloonState {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Alive, Self::Alive) => true,
-            (Self::Popped, Self::Popped) => true,
-            (Self::Escaped, Self::Escaped) => true,
-            _ => false,
-        }
+        matches!(
+            (self, other),
+            (Self::Alive, Self::Alive)
+                | (Self::Popped, Self::Popped)
+                | (Self::Escaped, Self::Escaped)
+        )
     }
 }
 
@@ -71,7 +71,7 @@ impl Balloon {
 }
 
 impl DrawableObject for Balloon {
-    fn draw(&self, sprite: Option<&Texture2D>, is_disabled: Option<bool>) {
+    fn draw(&self, sprite: Option<&Texture2D>, _is_disabled: Option<bool>) {
         draw_texture_ex(
             sprite.unwrap(),
             self.position.x - BALLOON_SIZE / 2.,
